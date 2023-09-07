@@ -21,20 +21,24 @@ touch -a "${ignorePathFile}"
 
 # Usage function.
 usage() {
+    echo ""
     echo "Usage: $0 [OPTIONS]"
+    echo ""
     echo "Options:"
     echo "  -p, --parent <dataset>    Set the parent dataset. If none all will be checked."
     echo "  -n, --notify              Set to send Discord notification with summary."
     echo "  -h, --help                Show this help message and exit."
     echo ""
-    echo "Running the `zfs diff`command requires sudo privileges. This can be resolved"
+    echo "Running the zfs diff command requires sudo privileges. This can be resolved"
     echo "by granting diff permissions to the user in question on the pools intended to be"
     echo "monitored by issuing the folling command:"
     echo ""
-    echo "`sudo zfs allow -u <user> diff <pool>`"
+    echo "  sudo zfs allow -u <user> diff <pool>"
     echo ""
-    echo "Refer to OpenZFS documentation for more details on the ZFS diff command."
-    echo "https://openzfs.github.io/openzfs-docs/man/master/8/zfs-diff.8.html"
+    echo "Refer to OpenZFS documentation for more details on the ZFS diff command:"
+    echo ""
+    echo "  https://openzfs.github.io/openzfs-docs/man/master/8/zfs-diff.8.html"
+    echo ""
 }
 
 # Parsed from command line arguments.
