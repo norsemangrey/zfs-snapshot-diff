@@ -81,7 +81,8 @@ To enable Discord notifications, you will need a separate `discord-webhook.sh` s
 
 Make sure to configure and set up the `discord-webhook.sh` script correctly, and ensure it's available in your environment for the notifications to work.
 
-![zfs-snapshot-diff-checker-discord-notification-example](https://github.com/norsemanGrey/zfs-snapshot-diff/assets/16608441/6db89bc9-aa8f-4d2a-84fa-fd846eed5541)
+![zfs-snapshot-diff-checker-discord-notification-example](https://github.com/norsemanGrey/zfs-snapshot-diff/assets/16608441/a576581e-95dc-4bb0-8aff-722923fc444b)
+
 
 ## Permissions for Running `zfs diff`
 
