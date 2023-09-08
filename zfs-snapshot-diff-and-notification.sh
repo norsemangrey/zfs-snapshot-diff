@@ -306,15 +306,15 @@ if [[ "${discordNotify}" = true ]]; then
     fi
 
     # Combine change report JSON blocks.
-    embeds=''${deletedJsonBlock}'
-            '${modifiedJsonBlock}'
-            '${renamedJsonBlock}'
-            '${addedJsonBlock}''
+    discordEmbedsJson=''${deletedJsonBlock}'
+                       '${modifiedJsonBlock}'
+                       '${renamedJsonBlock}'
+                       '${addedJsonBlock}''
 
     # Create content /description section
-    content="Report summary from ZFS dataset snapshot diff checker script on **$HOSTNAME** machine. The script checked **${datasetCount}** dataset(s) on **${poolCount}** pool(s) for changes since last snaphot."                                     
+    discordContentField="Report summary from ZFS dataset snapshot diff checker script on **$HOSTNAME** machine. The script checked **${datasetCount}** dataset(s) on **${poolCount}** pool(s) for changes since last snaphot."                                     
 
     # Pass data to Discord webhooks script for notification.
-    ${notifyScript} -c "${content}" -e "${embeds}" -f "${diffReportFile}"
+    ${notifyScript} -c "${discordContentField}" -e "${discordEmbedsJson}" -f "${diffReportFile}"
 
 fi
