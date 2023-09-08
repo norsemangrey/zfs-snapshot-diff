@@ -4,6 +4,7 @@ This Bash script is designed to check for differences between the current conten
 
 ## Table of Contents
 
+- [Background](#background)
 - [Overview](#overview)
 - [Usage](#usage)
 - [Requirements](#requirements)
@@ -18,6 +19,10 @@ This Bash script is designed to check for differences between the current conten
 - [Permissions for Running `zfs diff`](#permissions-for-running-zfs-diff)
 - [Excluded Datasets and Paths](#excluded-datasets-and-paths)
 
+
+## Background
+
+The script was primarily created to address the need for monitoring and reviewing changes to the content of my home servers. Its main purpose is to help identify unintended deletions or any unwanted modifications either by me or caused by various media and file services running on the servers. While not currently configured, the intention is to automate the script to run before scheduled backups of snapshots, allowing for review and immediate action if necessary. This to help prevent undesired changes from going unnoticed until backups are eventually purged over time.
 
 ## Overview
 
@@ -82,7 +87,6 @@ To enable Discord notifications, you will need a separate `discord-webhook.sh` s
 Make sure to configure and set up the `discord-webhook.sh` script correctly, and ensure it's available in your environment for the notifications to work.
 
 ![zfs-snapshot-diff-checker-discord-notification-example](https://github.com/norsemanGrey/zfs-snapshot-diff/assets/16608441/a576581e-95dc-4bb0-8aff-722923fc444b)
-
 
 ## Permissions for Running `zfs diff`
 
