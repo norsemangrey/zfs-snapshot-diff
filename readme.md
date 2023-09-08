@@ -82,7 +82,7 @@ If the `-n` or `--notify` option is specified, the script generates JSON blocks 
 
 To enable Discord notifications, you will need a separate `discord-webhook.sh` script for sending notifications. You can find and clone this script from another GitHub repository dedicated to Discord webhooks:
 
-[GitHub Repository: discord-webhook.sh](https://github.com/your-discord-webhook-repo)
+[GitHub Repository: discord-webhook-notification](https://github.com/norsemanGrey/discord-webhook-notification)
 
 Make sure to configure and set up the `discord-webhook.sh` script correctly, and ensure it's available in your environment for the notifications to work.
 
