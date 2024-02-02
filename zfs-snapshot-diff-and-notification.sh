@@ -133,21 +133,21 @@ for dataset in "${datasetsWithSnapshots[@]}"; do
 
     # Get the latest snapshot for the current dataset
     snapshot=$(echo "${snapshots}" | grep "${dataset}@" | tail -1)
-    snapshotName=$(echo "${snapshot}" | awk '{print $1}') 
+    snapshotName=$(echo "${snapshot}" | awk '{print $1}')
     snapshotDate=$(echo "${snapshot}" | cut -d' ' -f2-)
 
     # Get all changes to dataset files since snapshot.
     snapshotDiff=$(sudo zfs diff -hHF "${snapshotName}" | sort | grep -vFf "${ignorePathFile}")
 
     # Collect and sort data on each change.
-    while IFS=$'\t' read -r change typeSymbol file; do
+    while IFS=$'\t' read -r change typeSymbol fullPath oldPath; do
 
-        # Remove trailing "/" (awk is needed for rename change)
-        file=$(echo "${file%/}" | awk '{print $1}')
+        # Remove trailing "/".
+        fullPath=$(echo "${fullPath%/}")
 
         # Split file/folder name and path.
-        filePath=$(echo -e "${file%/*}")  
-        fileName=$(echo -e "${file##*/}")
+        filePath=$(echo -e "${fullPath%/*}")
+        fileName=$(echo -e "${fullPath##*/}")
 
         # Check file type.
         if [[ $typeSymbol == "/" ]]; then
@@ -160,13 +160,13 @@ for dataset in "${datasetsWithSnapshots[@]}"; do
             type="File"
             fileFormatted=":page_facing_up:  ${fileName}"
 
-        else            
+        else
 
             type="Other"
             fileFormatted=":receipt:  ${fileName}"
 
         fi
-        
+
         # Combine data for report entry.
         reportEntry="${dataset}|${filePath}|${type}|${fileName}|${snapshotDate}"
 
@@ -181,12 +181,12 @@ for dataset in "${datasetsWithSnapshots[@]}"; do
             addedEntry+=("Added|${reportEntry}")
             addedChange=""$addedChange"- "$fileFormatted"\n"
             [ $typeSymbol == "F" ] && ((addedFilesCounter++))
-            [ $typeSymbol == "/" ] && ((addedFoldersCounter++)) ;;            
+            [ $typeSymbol == "/" ] && ((addedFoldersCounter++)) ;;
         M)
             modifiedEntry+=("Modified|${reportEntry}")
             modifyChange=""$modifyChange"- "$fileFormatted"\n"
             [ $typeSymbol == "F" ] && ((modifiedFilesCounter++))
-            [ $typeSymbol == "/" ] && ((modifiedFoldersCounter++)) ;;            
+            [ $typeSymbol == "/" ] && ((modifiedFoldersCounter++)) ;;
         R)
             renamedEntry+=("Renamed|${reportEntry}")
             renamedChange=""$renamedChange"- "$fileFormatted"\n"
@@ -226,13 +226,13 @@ for dataset in "${datasetsWithSnapshots[@]}"; do
 
             changeField=$(generateChangeField "${dataset}" "${snapshotDateFormatted}\n${deletedChange//$'\n\n'/}")
             deletedFields+=" $changeField"
-            
+
         fi
         if [[ -n "${addedChange}" ]]; then
 
             changeField=$(generateChangeField "${dataset}" "${snapshotDateFormatted}\n${addedChange//$'\n\n'/}")
             addedFields+=" $changeField"
-            
+
         fi
         if [[ -n "${renamedChange}" ]]; then
 
@@ -241,7 +241,7 @@ for dataset in "${datasetsWithSnapshots[@]}"; do
 
         fi
 
-    fi      
+    fi
 
 done
 
@@ -249,7 +249,7 @@ done
 
 header="Change|Dataset|Path|Type|File|Since"
 spacer=(""$' '"|"$' '"|"$' '"|"$' '"|"$' '"|"$' '"")
-diffReportTable=("${header[@]}" "${spacer[@]}" "${deletedEntry[@]}" "${spacer[@]}" "${modifiedEntry[@]}" "${spacerEntry[@]}" "${renamedEntry[@]}"  "${spacer[@]}" "${addedEntry[@]}" )
+diffReportTable=("${header[@]}" "${spacer[@]}" "${deletedEntry[@]}" "${spacer[@]}" "${modifiedEntry[@]}" "${spacer[@]}" "${renamedEntry[@]}"  "${spacer[@]}" "${addedEntry[@]}" )
 
 {
   printf '%s\n' "${diffReportTable[@]}" | column -t -s "|"
@@ -312,7 +312,7 @@ if [[ "${discordNotify}" = true ]]; then
                        '${addedJsonBlock}''
 
     # Create content /description section
-    discordContentField="Report summary from ZFS dataset snapshot diff checker script on **$HOSTNAME** machine. The script checked **${datasetCount}** dataset(s) on **${poolCount}** pool(s) for changes since last snaphot."                                     
+    discordContentField="Report summary from ZFS dataset snapshot diff checker script on **$HOSTNAME** machine. The script checked **${datasetCount}** dataset(s) on **${poolCount}** pool(s) for changes since last snaphot."
 
     # Pass data to Discord webhooks script for notification.
     ${notifyScript} -c "${discordContentField}" -e "${discordEmbedsJson}" -f "${diffReportFile}"
