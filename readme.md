@@ -40,6 +40,7 @@ Usage: `./zfs-content-diff-check.sh [OPTIONS]`
 Options:
   -p, --parent <dataset>:   Set the parent dataset. If none, all datasets will be checked.
   -n, --notify:             Set to send Discord notification with a summary.
+  -d, --debug:              Turns on console output
   -h, --help:               Show this help message and exit.
 ```
 
@@ -77,6 +78,8 @@ A report is generated summarizing the changes found in the ZFS datasets. The rep
 ### Discord Data / Notification
 
 If the `-n` or `--notify` option is specified, the script generates JSON blocks for different types of changes (modified, deleted, added, renamed) and sends a summary of these changes to a Discord channel using a webhook.
+
+There are some limits to how much data can be sent in a Discord webhook so change lists for individual datasets will be truncated if too long (the plain report will not be affected), but in general limit checks and actions are handled by the Discord webhook script.
 
 ## Discord Webhook Script
 
