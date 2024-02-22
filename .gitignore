@@ -1,3 +1,5 @@
 .ignore-datasets.txt
 .ignore-paths.txt
 snapshot-diff-report.txt
+snapshot-diff-raw.txt
+snapshot-diff-discord.json

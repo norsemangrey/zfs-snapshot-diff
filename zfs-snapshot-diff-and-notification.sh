@@ -10,6 +10,8 @@ parentDirPath=$(dirname "${thisScriptPath}")
 # Set other paths.
 notifyScript="${parentDirPath}/notification/discord-webhook.sh"
 diffReportFile="${thisScriptPath}/snapshot-diff-report.txt"
+diffRawFile="${thisScriptPath}/snapshot-diff-raw.txt"
+lastMessageFile=${thisScriptPath}/snapshot-diff-discord.json
 ignoreDatasetFile="${thisScriptPath}/.ignore-datasets.txt"
 ignorePathFile="${thisScriptPath}/.ignore-paths.txt"
 
@@ -27,6 +29,7 @@ usage() {
     echo "Options:"
     echo "  -p, --parent <dataset>    Set the parent dataset. If none all will be checked."
     echo "  -n, --notify              Set to send Discord notification with summary."
+    echo "  -d, --debug		          Turns on console output."
     echo "  -h, --help                Show this help message and exit."
     echo ""
     echo "Running the zfs diff command requires sudo privileges. This can be resolved"
@@ -52,6 +55,10 @@ while [[ $# -gt 0 ]]; do
             discordNotify=true
             shift
             ;;
+        -d|--debug)
+            debug=true
+            shift
+            ;;
         -h|--help)
             usage
             exit 0
@@ -68,11 +75,15 @@ done
 if [ -n "${parentDataset}" ]; then
 
   if ! zfs list -H "${parentDataset}" &>/dev/null; then
-    echo "Error: Dataset '${parentDataset}' does not exist."
+    echo "Error: Dataset '${parentDataset}' does not exist." >&2
     exit 1
   fi
 
 fi
+
+# Remove debug files
+rm -f "${diffRawFile}"
+rm -f "${lastMessageFile}"
 
 #### INITIALIZE VALUES ####
 
@@ -98,6 +109,9 @@ renamedFoldersCounter=0
 
 #### COLLECT SNAPSHOT DATA ####
 
+# Output info if debug enabled
+[ ${debug} ] && echo "Parent: ${parentDataset}"
+
 # Get a list of snapshots under parent or all if no parent dataset provided.
 if [[ -z "${parentDataset}" ]]; then
 
@@ -119,6 +133,8 @@ datasetsWithSnapshotsList=$(echo "${snapshots}" | grep -vFf "${ignoreDatasetFile
 # Convert list to an array.
 readarray -t datasetsWithSnapshots <<< "$datasetsWithSnapshotsList"
 
+#### BUILD DIFF REPORT FIELDS ####
+
 # Loop throught datsets with snapshots.
 for dataset in "${datasetsWithSnapshots[@]}"; do
 
@@ -136,8 +152,17 @@ for dataset in "${datasetsWithSnapshots[@]}"; do
     snapshotName=$(echo "${snapshot}" | awk '{print $1}')
     snapshotDate=$(echo "${snapshot}" | cut -d' ' -f2-)
 
+    # Output info if debug enabled
+    [ ${debug} ] && echo "Snapshot: ${snapshot}"
+
     # Get all changes to dataset files since snapshot.
-    snapshotDiff=$(sudo zfs diff -hHF "${snapshotName}" | sort | grep -vFf "${ignorePathFile}")
+    snapshotDiffRaw=$(sudo zfs diff -hHF "${snapshotName}")
+
+    # Output raw diff to file for debugging
+    [ ${debug} ] && [ -n "${snapshotDiffRaw}" ] && echo "${snapshotDiffRaw}" >> "${diffRawFile}"
+
+    # Filter and sort based on ignored paths
+    snapshotDiff=$(echo "${snapshotDiffRaw}" | sort | grep -vFf "${ignorePathFile}")
 
     # Collect and sort data on each change.
     while IFS=$'\t' read -r change typeSymbol fullPath oldPath; do
@@ -166,6 +191,9 @@ for dataset in "${datasetsWithSnapshots[@]}"; do
             fileFormatted=":receipt:  ${fileName}"
 
         fi
+
+        # Add the old filename to output if the change is a rename.
+        [[ $change == "R" ]] && fileName="${fileName} ($(echo -e "${oldPath##*/}"))"
 
         # Combine data for report entry.
         reportEntry="${dataset}|${filePath}|${type}|${fileName}|${snapshotDate}"
@@ -196,6 +224,9 @@ for dataset in "${datasetsWithSnapshots[@]}"; do
 
     done <<< "$snapshotDiff"
 
+
+    #### BUILD DISCORD JSON DATA ####
+
     # Build JSON data if notification set.
     if [[ "${discordNotify}" = true ]]; then
 
@@ -203,12 +234,36 @@ for dataset in "${datasetsWithSnapshots[@]}"; do
         generateChangeField() {
 
             local name="$1"
-            local value="$2"
+            local value=$(truncateValueField "$2")
 
             echo    "{
                         \"name\": \"$name\",
                         \"value\": \"$value\"
                     },"
+
+        }
+
+        # Eclipse the value field if it is above the character limit for Discord
+        truncateValueField() {
+
+            local text="$1"
+            local length=${#text}
+
+            # Ensure length is less than 1024
+            if (( length >= 1024 )); then
+
+                # Shorten the string to no more than 1018 characters
+                truncatedText="${text:0:1018}"
+
+                # Remove "half eaten" last line
+                text=$(sed 's/\(.*\\n\).*/\1/' <<< ${truncatedText})
+
+                # Add "overflow ellipsis" on the last line
+                text+="...\n"
+
+            fi
+
+            echo "${text}"
 
         }
 
@@ -314,7 +369,10 @@ if [[ "${discordNotify}" = true ]]; then
     # Create content /description section
     discordContentField="Report summary from ZFS dataset snapshot diff checker script on **$HOSTNAME** machine. The script checked **${datasetCount}** dataset(s) on **${poolCount}** pool(s) for changes since last snaphot."
 
-    # Pass data to Discord webhooks script for notification.
-    ${notifyScript} -c "${discordContentField}" -e "${discordEmbedsJson}" -f "${diffReportFile}"
+    # Write last embed data that was attempted sent
+    [ ${debug} ] && echo "${discordEmbedsJson}" > ${lastMessageFile}
+
+    # Pass data to Discord webhooks script for notification (pass on debug argument if enabled)
+    ${notifyScript} -c "${discordContentField}" -e "${discordEmbedsJson}" -f "${diffReportFile}" ${debug:+-d}
 
 fi
