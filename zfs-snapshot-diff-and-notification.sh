@@ -27,10 +27,10 @@ usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  -p, --parent <dataset>    Set the parent dataset. If none all will be checked."
-    echo "  -n, --notify              Set to send Discord notification with summary."
-    echo "  -d, --debug		          Turns on console output."
-    echo "  -h, --help                Show this help message and exit."
+    echo "  -p, --parent <dataset>  Set the parent dataset. If none all will be checked."
+    echo "  -n, --notify            Set to send Discord notification with summary."
+    echo "  -d, --debug             Turns on console output."
+    echo "  -h, --help              Show this help message and exit."
     echo ""
     echo "Running the zfs diff command requires sudo privileges. This can be resolved"
     echo "by granting diff permissions to the user in question on the pools intended to be"
@@ -71,13 +71,26 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Validate dataset argument if provided.
+# Validate dataset argument if provided
 if [ -n "${parentDataset}" ]; then
 
   if ! zfs list -H "${parentDataset}" &>/dev/null; then
     echo "Error: Dataset '${parentDataset}' does not exist." >&2
     exit 1
   fi
+
+fi
+
+# Get parent dataset permissions
+permission=$(zfs allow "${parentDataset}" | grep diff)
+
+# Check if the permissions contains the diff permissions for the user
+if [[ -z ${permission} ]]; then
+
+    # Inform user
+    echo "Parent dataset is missing diff permissions for the user. Type the following command to set permissions on the dataset and its children:"
+    echo ""
+    echo "  sudo allow -u ${USER} diff ${parentDataset}"
 
 fi
 
@@ -110,7 +123,7 @@ renamedFoldersCounter=0
 #### COLLECT SNAPSHOT DATA ####
 
 # Output info if debug enabled
-[ ${debug} ] && echo "Parent: ${parentDataset}"
+[ ${debug} ] && echo "Parent: ${parentDataset}" || true
 
 # Get a list of snapshots under parent or all if no parent dataset provided.
 if [[ -z "${parentDataset}" ]]; then
@@ -153,13 +166,13 @@ for dataset in "${datasetsWithSnapshots[@]}"; do
     snapshotDate=$(echo "${snapshot}" | cut -d' ' -f2-)
 
     # Output info if debug enabled
-    [ ${debug} ] && echo "Snapshot: ${snapshot}"
+    [ ${debug} ] && echo "Snapshot: ${snapshot}" || true
 
     # Get all changes to dataset files since snapshot.
-    snapshotDiffRaw=$(sudo zfs diff -hHF "${snapshotName}")
+    snapshotDiffRaw=$(zfs diff -hHF "${snapshotName}")
 
     # Output raw diff to file for debugging
-    [ ${debug} ] && [ -n "${snapshotDiffRaw}" ] && echo "${snapshotDiffRaw}" >> "${diffRawFile}"
+    [ ${debug} ] && [ -n "${snapshotDiffRaw}" ] && echo "${snapshotDiffRaw}" >> "${diffRawFile}" || true
 
     # Filter and sort based on ignored paths
     snapshotDiff=$(echo "${snapshotDiffRaw}" | sort | grep -vFf "${ignorePathFile}")
@@ -370,7 +383,7 @@ if [[ "${discordNotify}" = true ]]; then
     discordContentField="Report summary from ZFS dataset snapshot diff checker script on **$HOSTNAME** machine. The script checked **${datasetCount}** dataset(s) on **${poolCount}** pool(s) for changes since last snaphot."
 
     # Write last embed data that was attempted sent
-    [ ${debug} ] && echo "${discordEmbedsJson}" > ${lastMessageFile}
+    [ ${debug} ] && echo "${discordEmbedsJson}" > ${lastMessageFile} || true
 
     # Pass data to Discord webhooks script for notification (pass on debug argument if enabled)
     ${notifyScript} -c "${discordContentField}" -e "${discordEmbedsJson}" -f "${diffReportFile}" ${debug:+-d}
