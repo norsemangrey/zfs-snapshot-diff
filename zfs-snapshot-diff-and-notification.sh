@@ -92,6 +92,8 @@ if [[ -z ${permission} ]]; then
     echo ""
     echo "  sudo allow -u ${USER} diff ${parentDataset}"
 
+    exit 1
+
 fi
 
 # Remove debug files
@@ -374,10 +376,18 @@ if [[ "${discordNotify}" = true ]]; then
     fi
 
     # Combine change report JSON blocks.
-    discordEmbedsJson=''${deletedJsonBlock}'
-                       '${modifiedJsonBlock}'
-                       '${renamedJsonBlock}'
-                       '${addedJsonBlock}''
+    discordEmbedsJson="${deletedJsonBlock}${modifiedJsonBlock}${renamedJsonBlock}${addedJsonBlock}"
+
+    # Add 'no changes' info block if no changes.
+    if [[ -z "${discordEmbedsJson}" ]]; then
+
+        discordEmbedsJson='{
+                                "title": "No Changes",
+                                "description": "No changes detected since the last snapshots.",
+                                "color": "10070709"
+                            },'
+
+    fi
 
     # Create content /description section
     discordContentField="Report summary from ZFS dataset snapshot diff checker script on **$HOSTNAME** machine. The script checked **${datasetCount}** dataset(s) on **${poolCount}** pool(s) for changes since last snaphot."
